@@ -8,12 +8,12 @@
 	"meta_description": "default description",
 	"publish_date": "24/09/2018",
 	"show_edit_github_banner": false,
-	"base_path": "https://raw.githubusercontent.com/ewalpole/open-api-tests/master/behance",
+	"base_path": "https://raw.githubusercontent.com/ewalpole/open-api-tests/pdfservices",
 	"pages": [
 		{
 			"pages": [],
 			"path": "swagger-yaml.json",
-			"title": "Behance Swagger Test"
+			"title": "PDF Services Tests"
 		}
 
 	]
