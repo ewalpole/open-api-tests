@@ -1,0 +1,3842 @@
+openapi: 3.0.1
+info:
+  title: Recommendations API
+  description: |
+    # API Reference
+    Recommendations API are based on [REST](https://en.wikipedia.org/wiki/Representational_state_transfer). This describes the
+    resources that make up the official Adobe Target Recommendations API. The resources are designated by nouns or objects in the
+    world of Recommendations like a feed or a design. The functionalities or operations on resources are designated by HTTP
+    methods in each resource request.
+
+    Adobe Target has multiple sets of APIs:
+    - [Admin API](http://developers.adobetarget.com/api/#admin-apis): Programmatically create and modify Activities, Audiences
+      and Offers.
+    - [Reporting API](http://developers.adobetarget.com/api/#reports): Export activity results and other reports.
+    - [Profile API](http://developers.adobetarget.com/api/#profiles): Retrieve and modify user profiles stored in Adobe Target.
+    - [Delivery API](http://developers.adobetarget.com/api/#server-side-delivery): Retrieve optimized and personalized content
+      from Target for delivery and to an end user.
+
+    Recommendations API are a subset of the Admin API.
+
+    # Getting Started
+    A Recommendations API call looks like this:
+    ```
+    curl -X POST \
+    https://mc.adobe.io/{{tenantId}}/target/recs/collections \
+    -H 'Accept: application/vnd.adobe.target.v1+json' \
+    -H 'Authorization: Bearer {{bearerToken}}' \
+    -H 'Content-Type: application/vnd.adobe.target.v1+json' \
+    -H 'X-Api-Key: {{xApiKey}}' \
+    -d '{
+      "name": "Backpacking Tents",
+      "rules": [
+        {
+          "id": {
+            "contains": [
+              "backpacking"
+            ]
+          }
+        }
+      ]
+    }'
+    ```
+    The `tenantId` is your Adobe Experience Cloud tenant ID. It is present as a subdomain of your Experience Cloud URL.
+    For example, if your Experience Cloud URL is _piedpiper.experiencecloud.adobe.com_ or _piedpiper.marketing.adobe.com_, the
+    tenant ID is _piedpiper_.
+
+    `bearerToken` and `xApiKey` are security token variables explained below in Authentication.
+
+    ## Limitations
+    - These APIs do not allow you to interact with resources created in the legacy Recommendations Classic UI.
+    - Resources can not be deleted until they are no longer referenced by any other resources. For example, a criteria cannot be
+      deleted if its being used in a recommendation unit. It can only be deleted if its removed from from wherever it is used.
+    - This documentation does not include following APIs:
+      - Entity Recommendation Download: To download CSV containing entity recommendations for a recommendation unit.
+      - Custom Algorithm Upload (legacy): To upload custom algorithm feed through request payload.
+      - Exclusions<sup>*</sup>
+      - Feeds<sup>*</sup>
+
+      <sub>* Coming soon</sub>
+  termsOfService: 'https://www.adobe.com/legal/terms.html'
+  contact:
+    name: Support
+    email: recs-support@adobe.com
+  version: '1.0'
+  x-logo:
+    url: https://git.corp.adobe.com/ajpatil/recs-openapi/raw/master/images/adobe_target-logo.png
+    altText: Adobe Target
+servers:
+  - url: https://mc.adobe.io/{tenantId}/target/recs
+    description: Adobe I/O gateway
+    variables:
+      tenantId:
+        default: adobedemo
+        description: Tenant ID
+paths:
+  /collections:
+    get:
+      tags:
+        - Collections
+      summary: List collections
+      description: Gets all available collections.
+      operationId: getCollections
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+      responses:
+        '200':
+          description: Successful request with list of collection resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollectionMin'
+                    description: List of collection objects.
+              examples:
+                CollectionsResponse:
+                  $ref: '#/components/examples/CollectionsResponse'
+    post:
+      tags:
+        - Collections
+      summary: Create collection
+      description: Creates a new collection as specified by the rules provided and returns the newly created collection
+        definition.
+      operationId: createCollection
+      requestBody:
+        $ref: '#/components/requestBodies/Collection'
+      responses:
+        '201':
+          description: Collection resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Collection'
+              examples:
+                CollectionResponse:
+                  $ref: '#/components/examples/CollectionResponse'
+  /collections/{id}:
+    get:
+      tags:
+        - Collections
+      summary: Get collection
+      description: Gets the collection with the given ID.
+      operationId: getCollection
+      responses:
+        '200':
+          description: Successful request with collection resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Collection'
+              examples:
+                CollectionResponse:
+                  $ref: '#/components/examples/CollectionResponse'
+    put:
+      tags:
+        - Collections
+      summary: Edit collection
+      description: Updates the collection with new name and/or new rules as specified and returns the updated collection
+        definition.
+      operationId: updateCollection
+      requestBody:
+        $ref: '#/components/requestBodies/Collection'
+      responses:
+        '200':
+          description: Successful request with updated collection resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Collection'
+              examples:
+                CollectionResponse:
+                  $ref: '#/components/examples/CollectionResponse'
+    delete:
+      tags:
+        - Collections
+      summary: Delete collection
+      description: Deletes the collection referenced by the given ID.
+      operationId: deleteCollection
+      responses:
+        '200':
+          description: Successful request with deleted collection resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Collection'
+              examples:
+                CollectionResponse:
+                  $ref: '#/components/examples/CollectionResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria:
+    get:
+      tags:
+        - Criteria
+      summary: List criteria
+      description: Gets all available criteria.
+      operationId: getAllCriteria
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of criteria resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaWithReferencesMin'
+                    description: List of criteria objects.
+              examples:
+                CriteriaListResponse:
+                  $ref: '#/components/examples/CriteriaListResponse'
+  /criteria/{id}:
+    get:
+      tags:
+        - Criteria
+      summary: Get criteria
+      description: Gets minimal criteria information with the given ID. For detailed information, make API call to criteria group
+        path, for example, `/criteria/item/{id}`.
+      operationId: getCriteria
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Criteria'
+              examples:
+                CriteriaMinimalResponse:
+                  $ref: '#/components/examples/CriteriaMinimalResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria/category:
+    get:
+      tags:
+        - Category Criteria
+      summary: List category criteria
+      description: Gets all available category based criteria.
+      operationId: getAllCriteriaCategory
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of category criteria resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaCategoryWithReferencesMin'
+                    description: List of category criteria objects.
+              examples:
+                CriteriaCategoryListResponse:
+                  $ref: '#/components/examples/CriteriaCategoryListResponse'
+    post:
+      tags:
+        - Category Criteria
+      summary: Create category criteria
+      description: Creates a new category based criteria as specified by the settings and configuration provided and returns the
+        newly created criteria definition.
+      operationId: createCriteriaCategory
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaCategory'
+      responses:
+        '201':
+          description: Criteria resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCategory'
+              examples:
+                CriteriaCategoryResponse:
+                  $ref: '#/components/examples/CriteriaCategoryResponse'
+  /criteria/category/{id}:
+    get:
+      tags:
+        - Category Criteria
+      summary: Get category criteria
+      description: Gets the category based criteria with the given ID.
+      operationId: getCriteriaCategory
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCategoryWithReferences'
+              examples:
+                CriteriaCategoryResponse:
+                  $ref: '#/components/examples/CriteriaCategoryResponse'
+    put:
+      tags:
+        - Category Criteria
+      summary: Edit category criteria
+      description: Updates the category based criteria with new settings and configuration as specified and returns the updated
+        criteria definition.
+      operationId: updateCriteriaCategory
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaCategory'
+      responses:
+        '200':
+          description: Successful request with updated criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCategoryWithReferences'
+              examples:
+                CriteriaCategoryResponse:
+                  $ref: '#/components/examples/CriteriaCategoryResponse'
+    delete:
+      tags:
+        - Category Criteria
+      summary: Delete category criteria
+      description: Deletes the category based criteria referenced by the given ID.
+      operationId: deleteCriteriaCategory
+      responses:
+        '200':
+          description: Successful request with deleted criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCategory'
+              examples:
+                CriteriaCategoryResponse:
+                  $ref: '#/components/examples/CriteriaCategoryResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria/custom:
+    get:
+      tags:
+        - Custom Criteria
+      summary: List custom criteria
+      description: Gets all available custom criteria.
+      operationId: getAllCriteriaCustom
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of custom criteria resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaCustomWithReferencesMin'
+                    description: List of custom criteria objects.
+              examples:
+                CriteriaCustomListResponse:
+                  $ref: '#/components/examples/CriteriaCustomListResponse'
+    post:
+      tags:
+        - Custom Criteria
+      summary: Create custom criteria
+      description: Creates a new custom criteria as specified by the settings, configuration, and feed provided and returns the
+        newly created criteria definition.
+      operationId: createCriteriaCustom
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaCustom'
+      responses:
+        '201':
+          description: Criteria resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCustom'
+              examples:
+                CriteriaCustomResponse:
+                  $ref: '#/components/examples/CriteriaCustomResponse'
+  /criteria/custom/{id}:
+    get:
+      tags:
+        - Custom Criteria
+      summary: Get custom criteria
+      description: Gets the custom criteria with the given ID.
+      operationId: getCriteriaCustom
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCustomWithReferences'
+              examples:
+                CriteriaCustomResponse:
+                  $ref: '#/components/examples/CriteriaCustomResponse'
+    put:
+      tags:
+        - Custom Criteria
+      summary: Edit custom criteria
+      description: Updates the custom criteria with new settings, configuration and feed as specified and returns the updated
+        criteria definition.
+      operationId: updateCriteriaCustom
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaCustom'
+      responses:
+        '200':
+          description: Successful request with updated criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCustomWithReferences'
+              examples:
+                CriteriaCustomResponse:
+                  $ref: '#/components/examples/CriteriaCustomResponse'
+    delete:
+      tags:
+        - Custom Criteria
+      summary: Delete custom criteria
+      description: Deletes the custom criteria referenced by the given ID.
+      operationId: deleteCriteriaCustom
+      responses:
+        '200':
+          description: Successful request with deleted criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaCustom'
+              examples:
+                CriteriaCustomResponse:
+                  $ref: '#/components/examples/CriteriaCustomResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria/item:
+    get:
+      tags:
+        - Item Criteria
+      summary: List item criteria
+      description: Gets all available item based criteria.
+      operationId: getAllCriteriaItem
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of item criteria resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaItemWithReferencesMin'
+                    description: List of item criteria objects.
+              examples:
+                CriteriaItemListResponse:
+                  $ref: '#/components/examples/CriteriaItemListResponse'
+    post:
+      tags:
+        - Item Criteria
+      summary: Create item criteria
+      description: Creates a new item based criteria as specified by the settings and configuration provided and returns the newly
+        created criteria definition.
+      operationId: createCriteriaItem
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaItem'
+      responses:
+        '201':
+          description: Criteria resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaItem'
+              examples:
+                CriteriaItemResponse:
+                  $ref: '#/components/examples/CriteriaItemResponse'
+  /criteria/item/{id}:
+    get:
+      tags:
+        - Item Criteria
+      summary: Get item criteria
+      description: Gets the item based criteria with the given ID.
+      operationId: getCriteriaItem
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaItemWithReferences'
+              examples:
+                CriteriaItemResponse:
+                  $ref: '#/components/examples/CriteriaItemResponse'
+    put:
+      tags:
+        - Item Criteria
+      summary: Edit item criteria
+      description: Updates the item based criteria with new settings and configuration as specified and returns the updated
+        criteria definition.
+      operationId: updateCriteriaItem
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaItem'
+      responses:
+        '200':
+          description: Successful request with updated criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaItemWithReferences'
+              examples:
+                CriteriaItemResponse:
+                  $ref: '#/components/examples/CriteriaItemResponse'
+    delete:
+      tags:
+        - Item Criteria
+      summary: Delete item criteria
+      description: Deletes the item based criteria referenced by the given ID.
+      operationId: deleteCriteriaItem
+      responses:
+        '200':
+          description: Successful request with deleted criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaItem'
+              examples:
+                CriteriaItemResponse:
+                  $ref: '#/components/examples/CriteriaItemResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria/popularity:
+    get:
+      tags:
+        - Popularity Criteria
+      summary: List popularity criteria
+      description: Gets all available popularity based criteria.
+      operationId: getAllCriteriaPopularity
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of popularity criteria resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaPopularityWithReferencesMin'
+                    description: List of popularity criteria objects.
+              examples:
+                CriteriaPopularityListResponse:
+                  $ref: '#/components/examples/CriteriaPopularityListResponse'
+    post:
+      tags:
+        - Popularity Criteria
+      summary: Create popularity criteria
+      description: Creates a new popularity based criteria as specified by the settings and configuration provided and returns the
+        newly created criteria definition.
+      operationId: createCriteriaPopularity
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaPopularity'
+      responses:
+        '201':
+          description: Criteria resource created with resource definition in
+            response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaPopularity'
+              examples:
+                CriteriaPopularityResponse:
+                  $ref: '#/components/examples/CriteriaPopularityResponse'
+  /criteria/popularity/{id}:
+    get:
+      tags:
+        - Popularity Criteria
+      summary: Get popularity criteria
+      description: Gets the popularity based criteria with the given ID.
+      operationId: getCriteriaPopularity
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaPopularityWithReferences'
+              examples:
+                CriteriaPopularityResponse:
+                  $ref: '#/components/examples/CriteriaPopularityResponse'
+    put:
+      tags:
+        - Popularity Criteria
+      summary: Edit popularity criteria
+      description: Updates the popularity based criteria with new settings and configuration as specified and returns the updated
+        criteria definition.
+      operationId: updateCriteriaPopularity
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaPopularity'
+      responses:
+        '200':
+          description: Successful request with updated criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaPopularityWithReferences'
+              examples:
+                CriteriaPopularityResponse:
+                  $ref: '#/components/examples/CriteriaPopularityResponse'
+    delete:
+      tags:
+        - Popularity Criteria
+      summary: Delete popularity criteria
+      description: Deletes the popularity based criteria referenced by the given ID.
+      operationId: deleteCriteriaPopularity
+      responses:
+        '200':
+          description: Successful request with deleted criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaPopularity'
+              examples:
+                CriteriaPopularityResponse:
+                  $ref: '#/components/examples/CriteriaPopularityResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria/profileattribute:
+    get:
+      tags:
+        - Profile Attribute Criteria
+      summary: List profile attribute criteria
+      description: Gets all available profile attribute based criteria.
+      operationId: getAllCriteriaProfileAttribute
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of profile attribute criteria resources in response.
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaProfileAttributeWithReferencesMin'
+                    description: List of profile attribute criteria objects.
+              examples:
+                CriteriaProfileAttributeListResponse:
+                  $ref: '#/components/examples/CriteriaProfileAttributeListResponse'
+    post:
+      tags:
+        - Profile Attribute Criteria
+      summary: Create profile attribute criteria
+      description: Creates a new profile attribute based criteria as specified by the settings and configuration provided and
+        returns the newly created criteria definition.
+      operationId: createCriteriaProfileAttribute
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaProfileAttribute'
+      responses:
+        '201':
+          description: Criteria resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaProfileAttribute'
+              examples:
+                CriteriaProfileAttributeResponse:
+                  $ref: '#/components/examples/CriteriaProfileAttributeResponse'
+  /criteria/profileattribute/{id}:
+    get:
+      tags:
+        - Profile Attribute Criteria
+      summary: Get profile attribute criteria
+      description: Gets the profile attribute based criteria with the given ID.
+      operationId: getCriteriaProfileAttribute
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaProfileAttributeWithReferences'
+              examples:
+                CriteriaProfileAttributeResponse:
+                  $ref: '#/components/examples/CriteriaProfileAttributeResponse'
+    put:
+      tags:
+        - Profile Attribute Criteria
+      summary: Edit profile attribute criteria
+      description: Updates the profile attribute based criteria with new settings and configuration as specified and returns the
+        updated criteria definition.
+      operationId: updateCriteriaProfileAttribute
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaProfileAttribute'
+      responses:
+        '200':
+          description: Successful request with updated criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaProfileAttributeWithReferences'
+              examples:
+                CriteriaProfileAttributeResponse:
+                  $ref: '#/components/examples/CriteriaProfileAttributeResponse'
+    delete:
+      tags:
+        - Profile Attribute Criteria
+      summary: Delete profile attribute criteria
+      description: Deletes the profile attribute based criteria referenced by the given ID.
+      operationId: deleteCriteriaProfileAttribute
+      responses:
+        '200':
+          description: Successful request with deleted criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaProfileAttribute'
+              examples:
+                CriteriaProfileAttributeResponse:
+                  $ref: '#/components/examples/CriteriaProfileAttributeResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria/recent:
+    get:
+      tags:
+        - Recent Criteria
+      summary: List recent criteria
+      description: Gets all available recent view based criteria.
+      operationId: getAllCriteriaRecent
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of recent criteria resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaRecentWithReferencesMin'
+                    description: List of recent criteria objects.
+              examples:
+                CriteriaRecentListResponse:
+                  $ref: '#/components/examples/CriteriaRecentListResponse'
+    post:
+      tags:
+        - Recent Criteria
+      summary: Create recent criteria
+      description: Creates a new recent view based criteria as specified by the settings and configuration provided and returns
+        the newly created criteria definition.
+      operationId: createCriteriaRecent
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaRecent'
+      responses:
+        '201':
+          description: Criteria resource created with resource definition in
+            response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaRecent'
+              examples:
+                CriteriaRecentResponse:
+                  $ref: '#/components/examples/CriteriaRecentResponse'
+  /criteria/recent/{id}:
+    get:
+      tags:
+        - Recent Criteria
+      summary: Get recent criteria
+      description: Gets the recent criteria with the given ID.
+      operationId: getCriteriaRecent
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaRecentWithReferences'
+              examples:
+                CriteriaRecentResponse:
+                  $ref: '#/components/examples/CriteriaRecentResponse'
+    put:
+      tags:
+        - Recent Criteria
+      summary: Edit recent criteria
+      description: Updates the recent criteria with new settings and configuration as specified and returns the updated criteria
+        definition.
+      operationId: updateCriteriaRecent
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaRecent'
+      responses:
+        '200':
+          description: Successful request with updated criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaRecentWithReferences'
+              examples:
+                CriteriaRecentResponse:
+                  $ref: '#/components/examples/CriteriaRecentResponse'
+    delete:
+      tags:
+        - Recent Criteria
+      summary: Delete recent criteria
+      description: Deletes the recent view based criteria referenced by the given ID.
+      operationId: deleteCriteriaRecent
+      responses:
+        '200':
+          description: Successful request with deleted criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaRecent'
+              examples:
+                CriteriaRecentResponse:
+                  $ref: '#/components/examples/CriteriaRecentResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /criteria/sequence:
+    get:
+      tags:
+        - Sequence Criteria
+      summary: List sequence criteria
+      description: Gets all available sequence criteria.
+      operationId: getAllCriteriaSequence
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of sequence criteria resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CriteriaSequenceWithReferencesMin'
+                    description: List of sequence criteria objects.
+              examples:
+                CriteriaSequenceListResponse:
+                  $ref: '#/components/examples/CriteriaSequenceListResponse'
+    post:
+      tags:
+        - Sequence Criteria
+      summary: Create sequence criteria
+      description: Creates a new sequence criteria as specified by the settings, and single criteria IDs provided and returns the
+        newly created criteria definition.
+      operationId: createCriteriaSequence
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaSequence'
+      responses:
+        '201':
+          description: Criteria resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaSequence'
+              examples:
+                CriteriaSequenceResponse:
+                  $ref: '#/components/examples/CriteriaSequenceResponse'
+  /criteria/sequence/{id}:
+    get:
+      tags:
+        - Sequence Criteria
+      summary: Get sequence criteria
+      description: Gets the sequence criteria with the given ID.
+      operationId: getCriteriaSequence
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaSequenceWithReferences'
+              examples:
+                CriteriaSequenceResponse:
+                  $ref: '#/components/examples/CriteriaSequenceResponse'
+    put:
+      tags:
+        - Sequence Criteria
+      summary: Edit sequence criteria
+      description: Updates the sequence criteria with new settings and new single criteria IDs as specified and returns the
+        updated criteria definition.
+      operationId: updateCriteriaSequence
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/CriteriaSequence'
+      responses:
+        '200':
+          description: Successful request with updated criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaSequenceWithReferences'
+              examples:
+                CriteriaSequenceResponse:
+                  $ref: '#/components/examples/CriteriaSequenceResponse'
+    delete:
+      tags:
+        - Sequence Criteria
+      summary: Delete sequence criteria
+      description: Deletes the sequence criteria referenced by the given ID.
+      operationId: deleteCriteriaSequence
+      responses:
+        '200':
+          description: Successful request with deleted criteria resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/CriteriaSequence'
+              examples:
+                CriteriaSequenceResponse:
+                  $ref: '#/components/examples/CriteriaSequenceResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /designs:
+    get:
+      tags:
+        - Designs
+      summary: List designs
+      description: Gets all available designs.
+      operationId: getDesigns
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/references'
+        - $ref: '#/components/parameters/includeScript'
+      responses:
+        '200':
+          description: Successful request with list of design resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DesignWithReferencesMin'
+                    description: List of design objects.
+              examples:
+                DesignsResponse:
+                  $ref: '#/components/examples/DesignsResponse'
+    post:
+      tags:
+        - Designs
+      summary: Create a design
+      description: Creates a new design as specified by the script provided and returns the newly created design definition.
+      operationId: createDesign
+      requestBody:
+        $ref: '#/components/requestBodies/Design'
+      responses:
+        '201':
+          description: Design resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json:
+              schema:
+                $ref: '#/components/schemas/Design'
+              examples:
+                DesignResponse:
+                  $ref: '#/components/examples/DesignResponse'
+  /designs/{id}:
+    get:
+      tags:
+        - Designs
+      summary: Get design
+      description: Gets the design with the given ID.
+      operationId: getDesign
+      parameters:
+        - $ref: '#/components/parameters/references'
+        - $ref: '#/components/parameters/includeScript'
+      responses:
+        '200':
+          description: Successful request with design resource in response
+          content:
+            application/vnd.adobe.target.v1+json:
+              schema:
+                $ref: '#/components/schemas/DesignWithReferences'
+              examples:
+                DesignResponse:
+                  $ref: '#/components/examples/DesignResponse'
+    put:
+      tags:
+        - Designs
+      summary: Edit design
+      description: Updates the design with new name and/or new script as specified and returns the updated design definition.
+      operationId: updateDesign
+      requestBody:
+        $ref: '#/components/requestBodies/Design'
+      parameters:
+        - $ref: '#/components/parameters/references'
+        - $ref: '#/components/parameters/includeScript'
+      responses:
+        '200':
+          description: Successful request with updated design resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/DesignWithReferences'
+              examples:
+                DesignResponse:
+                  $ref: '#/components/examples/DesignResponse'
+    delete:
+      tags:
+        - Designs
+      summary: Delete design
+      description: Deletes the design referenced by the given ID.
+      operationId: deleteDesign
+      responses:
+        '200':
+          description: Successful request with deleted design resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Design'
+              examples:
+                DesignResponse:
+                  $ref: '#/components/examples/DesignResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+  /designs/validate:
+    post:
+      tags:
+        - Designs
+      summary: Validate design
+      description: |
+        Validates a design by verifying the correctness of the script. If its correct, it returns number of entity objects used
+        in the script; otherwise it returns the validation error.
+
+        _Note this POST request does not create any resource. The endpoint is not a resource but rather it is simply a method to
+        validate the design in request payload._.
+      operationId: validateDesign
+      requestBody:
+        $ref: '#/components/requestBodies/Design'
+      responses:
+        '200':
+          description: Design resource validated with validation result in response
+          content:
+            application/vnd.adobe.target.v1+json:
+              schema:
+                $ref: '#/components/schemas/DesignValidationResult'
+              examples:
+                DesignValidationResultResponse:
+                    $ref: '#/components/examples/DesignValidationResultResponse'
+  /entities:
+    post:
+      tags:
+        - Entities
+      summary: Save entity
+      description: Creates entities, updates if present, with the given entity details and returns the numbers of entities
+        rejected, and created or updated. Entities can be rejected if entity details do not conform to the schema. More
+        info available [here](https://marketing.adobe.com/resources/help/en_US/target/recs/r_entity_attributes.html).
+      operationId: saveEntity
+      requestBody:
+        $ref: '#/components/requestBodies/EntityBatch'
+      responses:
+        '200':
+          description: Successful request with entity batch update result in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/EntityBatchUpdateResult'
+              examples:
+                EntityBatchUpdateResult:
+                  $ref: '#/components/examples/EntityBatchUpdateResult'
+    delete:
+      tags:
+        - Entities
+      summary: Delete entities
+      description: |
+        Deletes entities referenced by the given IDs. If no ID is given, all entities in the given environment are deleted.
+        If no environment ID is given, entities will be deleted from all environments. Use this with caution!
+
+        _Note this DELETE request does not delete a singular resource. The endpoint is not a resource but rather it is simply a
+        method to delete multiple entities specified in request payload._
+      operationId: deleteEntities
+      parameters:
+        - name: ids
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 1000
+          description: List of entity IDs. If not set, all entities will be deleted.
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: number
+            format: double
+          description: ID of an environment. If not set, entities will be deleted from all environments.
+      responses:
+        '200':
+          description: Successful request with entity batch delete result in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/EntityBatchDeleteResult'
+              examples:
+                EntityResponse:
+                  $ref: '#/components/examples/EntityBatchDeleteResult'
+  /entities/{id}:
+    get:
+      tags:
+        - Entities
+      summary: Get entity
+      description: Gets entity with the given ID from default environment. To retrieve entity from a specific environment,
+        `environmentId` request parameter can be used.
+      operationId: getEntity
+      parameters:
+        - $ref: '#/components/parameters/environmentId'
+      responses:
+        '200':
+          description: Successful request with entity resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Entity'
+              examples:
+                EntityResponse:
+                  $ref: '#/components/examples/EntityResponse'
+    parameters:
+      - $ref: '#/components/parameters/entityId'
+  /promotions:
+    get:
+      tags:
+        - Promotions
+      summary: List promotions
+      description: List all available promotions.
+      operationId: getPromotions
+      parameters:
+        - $ref: '#/components/parameters/offset'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/referencesMin'
+      responses:
+        '200':
+          description: Successful request with list of promotion resources in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                type: object
+                properties:
+                  offset:
+                    $ref: '#/components/schemas/offset'
+                  limit:
+                    $ref: '#/components/schemas/limit'
+                  total:
+                    $ref: '#/components/schemas/total'
+                  list:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PromotionWithReferencesMin'
+                    description: List of promotion objects.
+              examples:
+                PromotionsResponse:
+                  $ref: '#/components/examples/PromotionsResponse'
+    post:
+      tags:
+        - Promotions
+      summary: Create promotion
+      description: Creates a new promotion as specified by the settings and configuration provided and returns the newly created
+        promotion definition.
+      operationId: createPromotion
+      requestBody:
+        $ref: '#/components/requestBodies/Promotion'
+      responses:
+        '201':
+          description: Promotion resource created with resource definition in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+              examples:
+                PromotionResponse:
+                  $ref: '#/components/examples/PromotionResponse'
+  /promotions/{id}:
+    get:
+      tags:
+        - Promotions
+      summary: Get promotion
+      description: Gets the promotion with the given ID.
+      operationId: getPromotion
+      parameters:
+        - $ref: '#/components/parameters/references'
+      responses:
+        '200':
+          description: Successful request with promotion resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/PromotionWithReferences'
+              examples:
+                PromotionResponse:
+                  $ref: '#/components/examples/PromotionResponse'
+    put:
+      tags:
+        - Promotions
+      summary: Edit promotion
+      description: Updates the promotion with the new settings and configuration as specified and return the updated promotion
+        definition.
+      operationId: updatePromotion
+      parameters:
+        - $ref: '#/components/parameters/references'
+      requestBody:
+        $ref: '#/components/requestBodies/Promotion'
+      responses:
+        '200':
+          description: Successful request with updated promotion resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/PromotionWithReferences'
+              examples:
+                PromotionResponse:
+                  $ref: '#/components/examples/PromotionResponse'
+    delete:
+      tags:
+        - Promotions
+      summary: Delete promotion
+      description: Deletes the promotion referenced by the given ID.
+      operationId: deletePromotion
+      responses:
+        '200':
+          description: Successful request with deleted promotion resource in response
+          content:
+            application/vnd.adobe.target.v1+json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Promotion'
+              examples:
+                PromotionResponse:
+                  $ref: '#/components/examples/PromotionResponse'
+    parameters:
+      - $ref: '#/components/parameters/id'
+components:
+  schemas:
+    Collection:
+      allOf:
+        - $ref: '#/components/schemas/CollectionMin'
+        - type: object
+          properties:
+            rules:
+              type: array
+              items:
+                $ref: '#/components/schemas/RestBasicMatcher'
+              minItems: 1
+              maxItems: 1000
+              description: |
+                Array of rules containing attribute : operation pairs.
+
+                The attribute is any valid entity attribute. It is a required field and it should not be more than 100 characters.
+
+                The operation is a pair of operator and operand values. The operator can be one of:
+                  - Numeric operators: `greaterOrEquals`, `lesserOrEquals`
+                  - String operators: `startsWith`, `endsWith`, `contains`, `doesNotContain`
+                  - Alphanumeric operators: `equals`, `notEquals`, `valueIsPresent`, `valueIsNotPresent`
+
+                The other part of operation, operand values, is an array of values. Each value cannot be more than 250 characters.
+                There must be atleast 1 value and no more than 1000 values. Operand values are not required when operator is
+                either `valueIsPresent` or `valueIsNotPresent`. Numeric operators accept integer or floating point operand values.
+          required:
+            - rules
+    CollectionMin:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        name:
+          type: string
+          maxLength: 250
+          description: Unique name of the collection.
+      required:
+        - name
+    Criteria:
+      type: object
+      properties:
+        criteriaGroup:
+          type: string
+          readOnly: true
+        criteriaTitle:
+          type: string
+          maxLength: 250
+          description: Displayed in the design using variable `$criteria.title`.
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        name:
+          type: string
+          maxLength: 250
+          description: Unique name of the criteria.
+      required:
+        - name
+    CriteriaCategory:
+      allOf:
+        - $ref: '#/components/schemas/Criteria'
+        - type: object
+          properties:
+            aggregation:
+              type: string
+              enum: [NONE, AGGREGATE, ALL_OR_NOTHING]
+              default: NONE
+              description: |
+                Whether recommendations should be shown solely based on the key (`NONE`) or visitor's behavioral history with
+                respect to the key (`AGGREGATE`, `ALL_OR_NOTHING`).
+                  - `NONE` implies no aggregation, to only show recommendations for the given key.
+                  - `AGGREGATE` begins with recommendations for the given key, favorite category in this instance, then continues
+                    to next favorite of visitor's favorite categories until the design is filled.
+                  - `ALL_OR_NOTHING` is similar to aggregation but the aggregation only happens if the given key, favorite
+                    category in this instance, has enough recommendations to fill the design. If the key does not have enough
+                    recommendations, next favorite category in visitor's favorite categories is considered sequentially until the
+                    design is filled.
+
+                If the key is current category, only `NONE` is valid. For key as favorite category, all aggregation options are
+                available.
+            backupDisabled:
+              type: boolean
+              default: false
+              description: Whether backup recommendations are disabled when criteria does not generate enough recommendations.
+            backupInclusionFilteringEnabled:
+              type: boolean
+              default: true
+              description: Whether inclusion rules on the criteria should be applied to backup recommendations.
+            configuration:
+              $ref: '#/components/schemas/CriteriaCategoryConfiguration'
+            criteriaGroup:
+              type: string
+              enum: [CATEGORY]
+              readOnly: true
+            daysCount:
+              type: string
+              enum: [ONE_DAY, TWO_DAYS, ONE_WEEK, TWO_WEEKS, ONE_MONTH, TWO_MONTHS]
+              description: Time range of historical visitor behavioral data to consider for generating recommendations.
+            enableCaching:
+              type: boolean
+              default: false
+              deprecated: true
+              readOnly: true
+            excludePurchases:
+              type: boolean
+              default: false
+              description: Whether items that were previously purchased by the visitor should be excluded in recommendations.
+            key:
+              type: string
+              enum: [CURRENT, FAVORITE]
+              description: |
+                Recommendation key. Values:
+
+                - `CURRENT`: The category of the currently viewed item.
+                - `FAVORITE`: The category among visitor's categories with highest score. The recommendations are determined by
+                  the categories that have been most viewed. The score is determined by recency/frequency: 10 points for first
+                  category view, 5 points for every subsequent view.
+            minInventory:
+              type: integer
+              format: int32
+              minimum: 0
+              description: Minimum number of pieces needed in stock for an item to be considered for recommendaton.
+            partialDesignAllowed:
+              type: boolean
+              default: false
+              description: Whether design be shown when the number of recommendations are less than item slots in the design.
+            type:
+              type: string
+              enum: [BOUGHT, VIEWED]
+              description: |
+                Recommendation logic. Values:
+
+                  - `BOUGHT`: Top sold items.
+                  - `VIEWED`: Most viewed items.
+          required:
+            - daysCount
+            - key
+            - type
+    CriteriaCategoryConfiguration:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaConfiguration'
+        - type: object
+          properties:
+            pastBehaviorOrdinal:
+              type: integer
+              format: int32
+    CriteriaCategoryWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaCategory'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    CriteriaCategoryWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaCategory'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    CriteriaConfiguration:
+      type: object
+      properties:
+        inclusionRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestInclusionMatcher'
+          maxItems: 1000
+          description: |
+            Filtering rules to narrow the items to be displayed as recommendations. Inclusion rules are conjunctive and all rules
+            must be met to include an item in a recommendation. [More info](https://marketing.adobe.com/resources/help/en_US/target/recs/t_create_new_algorithm.html).
+        priceRange:
+          $ref: '#/components/schemas/CriteriaPriceRange'
+        rankingRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestAlgoRankingRule'
+          maxItems: 1000
+          description: |
+            Rules for attribute weighting. Attribute weighting can be used to "nudge" the algorithm so certain items are more
+            likely to be shown. [More info](https://marketing.adobe.com/resources/help/en_US/target/recs/t_create_new_algorithm.html).
+      description: Object containing inclusion rules, attribute weighting, price filter, and some more configuration options
+        specific to the criteria group.
+    CriteriaCustom:
+      allOf:
+        - $ref: '#/components/schemas/Criteria'
+        - type: object
+          properties:
+            backupDisabled:
+              type: boolean
+              default: false
+              description: Whether backup recommendations are disabled when enough recommendations from CSV feed are not
+                applicable in design.
+            backupInclusionFilteringEnabled:
+              type: boolean
+              default: true
+              description: Whether inclusion rules on the criteria should be applied to backup recommendations.
+            configuration:
+              $ref: '#/components/schemas/CriteriaCustomConfiguration'
+            criteriaGroup:
+              type: string
+              enum: [CUSTOM]
+              readOnly: true
+            enableCaching:
+              type: boolean
+              default: false
+              deprecated: true
+              readOnly: true
+            excludePurchases:
+              type: boolean
+              default: false
+              description: Whether items that were previously purchased by the visitor should be excluded in recommendations.
+            key:
+              type: string
+              enum: [CURRENT, LAST_VIEWED, LAST_PURCHASED, MOST_VIEWED, CURRENT_CATEGORY, FAVORITE_CATEGORY, PROFILE_ATTRIBUTE]
+              description: |
+                Recommendation key. Values:
+
+                - `CURRENT`: The currently viewed item.
+                - `LAST_VIEWED`: The last viewed item.
+                - `LAST_PURCHASED`: The last purchased item.
+                - `MOST_VIEWED`: The most viewed item. The recommendations are determined by items that have been most viewed.
+                  The score is determined by recency/frequency: 10 points for first item view, 5 points for every subsequent view,
+                  all points are halved after the session ends.
+                - `CURRENT_CATEGORY`: The category of the currently viewed item.
+                - `FAVORITE_CATEGORY`: The category among visitor's categories with highest score. The recommendations are
+                  determined by the categories that have been most viewed. The score is determined by recency/frequency: 10 points
+                  for first category view, 5 points for every subsequent view.
+                - `PROFILE_ATTRIBUTE`: Profile attribute.
+            minInventory:
+              type: integer
+              format: int32
+              minimum: 0
+              description: Minimum number of pieces needed in stock for an item to be considered for recommendaton.
+            partialDesignAllowed:
+              type: boolean
+              default: false
+              description: Whether design be shown when the number of recommendations are less than item slots in the design.
+          required:
+            - key
+            - configuration
+    CriteriaCustomConfiguration:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaConfiguration'
+        - type: object
+          properties:
+            attribute:
+              type: string
+              pattern: '^(profile\.|user\.).+'
+              description: Applicable only when key is `PROFILE_ATTRIBUTE`. This is the profile attribute.
+            feed:
+              type: object
+              properties:
+                connection:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [url, ftp]
+                      description: 'Protocol supported by the feed: HTTP or FTP'
+                    attributes:
+                      oneOf:
+                        - $ref: '#/components/schemas/UrlFeedConnectionType'
+                        - $ref: '#/components/schemas/FtpFeedConnectionType'
+                  required:
+                    - type
+                    - attributes
+                  description: Object containing feed connection details.
+                environmentId:
+                  type: integer
+                  format: int32
+                  description: Identifier of a valid environment. Use `-1` for all environments.
+                scheduleTime:
+                  type: string
+                  pattern: '^([0-1][0-9]|2[0-3]):([0-5][0-9])$'
+                  description: Scheduled time to run the feed. Format is
+                    `HH:mm`.
+                scheduleType:
+                  type: string
+                  enum: [daily, weekly, biWeekly, never]
+                  description: Feeds can be scheduled to be run at a given
+                    frequency.
+                uploadHistory:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [SUCCESS, UNKNOWN_ERROR, PARSING_ERROR, SERVER_NOT_FOUND, CREDENTIALS_ERROR, DIRECTORY_NOT_FOUND,
+                          FILE_NOT_FOUND, SAINT_REPORT_NOT_FOUND, CLASSIFICATION_NOT_FOUND, SCHEDULED, DOWNLOADING_FEED_FILE,
+                          IMPORTING, FLUSHING_RESULTS, FLUSH_FAILED]
+                      message:
+                        type: string
+                      date:
+                        type: string
+                        format: date-time
+                  required:
+                    - status
+                    - message
+                    - date
+                  readOnly: true
+                  description: Feed upload history.
+              required:
+                - connection
+                - environmentId
+                - scheduleType
+          required:
+            - feed
+    CriteriaCustomWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaCustom'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    CriteriaCustomWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaCustom'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    CriteriaItem:
+      allOf:
+        - $ref: '#/components/schemas/Criteria'
+        - type: object
+          properties:
+            aggregation:
+              type: string
+              enum: [NONE, AGGREGATE, ALL_OR_NOTHING]
+              default: NONE
+              description: |
+                Whether recommendations should be shown solely based on the key (`NONE`) or visitor's behavioral history with
+                respect to the key (`AGGREGATE`, `ALL_OR_NOTHING`).
+
+                  - `NONE` implies no aggregation, to only show recommendations for the given key.
+                  - `AGGREGATE` begins with recommendations for the given key, last viewed item, for instance, then continues to
+                    next last viewed item by visitor until the design is filled.
+                  - `ALL_OR_NOTHING` is similar to aggregation but the aggregation only happens if the given key, last purchased
+                    item, for instance, has enough recommendations to fill the design. If the key does not have enough
+                    recommendations, second to last purchased item by visitor is considered and so forth until the design is
+                    filled.
+
+                If the key is `CURRENT`, only `NONE` is valid.
+            backupDisabled:
+              type: boolean
+              default: false
+              description: Whether backup recommendations are disabled when criteria does not generate enough recommendations.
+            backupInclusionFilteringEnabled:
+              type: boolean
+              default: true
+              description: Whether inclusion rules on the criteria should be applied to backup recommendations.
+            configuration:
+              $ref: '#/components/schemas/CriteriaItemConfiguration'
+            criteriaGroup:
+              type: string
+              enum: [ITEM]
+              readOnly: true
+            daysCount:
+              type: string
+              enum: [ONE_DAY, TWO_DAYS, ONE_WEEK, TWO_WEEKS, ONE_MONTH, TWO_MONTHS]
+              description: Time range of historical visitor behavioral data to consider for generating recommendations.
+            enableCaching:
+              type: boolean
+              default: false
+              deprecated: true
+              readOnly: true
+            excludePurchases:
+              type: boolean
+              default: false
+              description: Whether items that were previously purchased by the visitor should be excluded in recommendations.
+            key:
+              type: string
+              enum: [CURRENT, LAST_VIEWED, LAST_PURCHASED, MOST_VIEWED]
+              description: |
+                Recommendation key. Values:
+
+                - `CURRENT`: The currently viewed item.
+                - `LAST_VIEWED`: The last viewed item.
+                - `LAST_PURCHASED`: The last purchased item.
+                - `MOST_VIEWED`: The most viewed item. The recommendations are determined by items that have been most viewed.
+                  The score is determined by recency/frequency: 10 points for first item view, 5 points for every subsequent view,
+                  all points are halved after the session ends.
+            minInventory:
+              type: integer
+              format: int32
+              minimum: 0
+              description: Minimum number of pieces needed in stock for an item to be considered for recommendaton.
+            partialDesignAllowed:
+              type: boolean
+              default: false
+              description: Whether design be shown when the number of recommendations are less than item slots in the design.
+            type:
+              type: string
+              enum: [VIEWED_BOUGHT, BOUGHT_CF, VIEWED_CF, SITE_AFFINITY, SIMILARITY]
+              description: |
+                Recommendation logic. Values:
+
+                  - `VIEWED_BOUGHT`: People who viewed this, bought that.
+                  - `BOUGHT_CF`: People who bought this, bought that.
+                  - `VIEWED_CF`: People who viewed this, viewed that.
+                  - `SITE_AFFINITY`: Considers items based on the certainty of a relationship between items. Confidence setting is
+                    used to determine how much data (strong or weak affinity) is required before a recommendation is presented.
+                  - `SIMILARITY`: Considers items similar to items based on current page activity or past visitor behavior.
+          required:
+            - configuration
+            - daysCount
+            - key
+            - type
+    CriteriaItemConfiguration:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaConfiguration'
+        - type: object
+          properties:
+            confidence:
+              type: string
+              enum: [VERY_WEAK, WEAK, MODERATE, STRONG, VERY_STRONG]
+              description: Applicable only when type is `SITE_AFFINITY`. This determines how much data (strong or weak affinity)
+                is required before a recommendation is presented.
+            datasource:
+              type: string
+              default: mboxes
+              description: Behavioral data source can either be `mboxes` or a valid Analytics report report suite. A report suite
+                can not be used when type is `SIMILARITY`.
+            minSimilarity:
+              type: number
+              format: double
+              minimum: 0.1
+              maximum: 0.98
+              default: 0.4
+              description: Applicable only when type is `SIMILARITY`. This is the threshold of minimum similarity required for two
+                entities to be deemed similar. Lower number implies products will be more similar. But lower the number, criteria
+                execution is exponentially longer.
+            pastBehaviorOrdinal:
+              type: integer
+              format: int32
+    CriteriaItemWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaItem'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    CriteriaItemWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaItem'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    CriteriaPopularity:
+      allOf:
+        - $ref: '#/components/schemas/Criteria'
+        - type: object
+          properties:
+            aggregation:
+              type: string
+              enum: [NONE, AGGREGATE, ALL_OR_NOTHING]
+              default: NONE
+              description: |
+                Whether recommendations should be shown solely based on the key (`NONE`) or visitor's behavioral history with
+                respect to the key (`AGGREGATE`, `ALL_OR_NOTHING`).
+                  - `NONE` implies no aggregation, to only show recommendations for the given key.
+                  - `AGGREGATE` begins with recommendations for the given key, top seller in this instance, then continues to next
+                    top seller until the design is filled.
+                  - `ALL_OR_NOTHING` is similar to aggregation but the aggregation only happens if the given key, most viewed item
+                    in this instance, has enough recommendations to fill the design. If the key does not have enough
+                    recommendations, next most viewed item is considered sequentially until the design is filled.
+            backupDisabled:
+              type: boolean
+              default: false
+              description: Whether backup recommendations are disabled when criteria does not generate enough recommendations.
+            backupInclusionFilteringEnabled:
+              type: boolean
+              default: true
+              description: Whether inclusion rules on the criteria should be applied to backup recommendations.
+            configuration:
+              $ref: '#/components/schemas/CriteriaPopularityConfiguration'
+            criteriaGroup:
+              type: string
+              enum: [POPULARITY]
+              readOnly: true
+            daysCount:
+              type: string
+              enum: [ONE_DAY, TWO_DAYS, ONE_WEEK, TWO_WEEKS, ONE_MONTH, TWO_MONTHS]
+              description: Time range of historical visitor behavioral data to consider for generating recommendations.
+            enableCaching:
+              type: boolean
+              default: false
+              deprecated: true
+              readOnly: true
+            excludePurchases:
+              type: boolean
+              default: false
+              description: Whether items that were previously purchased by the visitor should be excluded in recommendations.
+            key:
+              type: string
+              description: Applicable only when type is `METRIC`. This is the recommendation key whose value is the name of the
+                Analytics report suite metric.
+            minInventory:
+              type: integer
+              format: int32
+              minimum: 0
+              description: Minimum number of pieces needed in stock for an item to be considered for recommendaton.
+            partialDesignAllowed:
+              type: boolean
+              default: false
+              description: Whether design be shown when the number of recommendations are less than item slots in the design.
+            type:
+              type: string
+              enum: [SELLERS, VIEWED, METRIC]
+              description: |
+                Recommendation logic. Values:
+
+                  - `SELLERS`: Top sellers.
+                  - `VIEWED`: Most viewed items.
+                  - `METRIC`: Considers Analytics product report suite for recommendations.
+          required:
+            - daysCount
+            - key
+            - type
+    CriteriaPopularityConfiguration:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaConfiguration'
+        - type: object
+          properties:
+            datasource:
+              type: string
+              default: mboxes
+              description: Behavioral data source can either be `mboxes` or a valid report suite. If type is `METRIC`, this field
+                is required and value must be a valid report suite.
+            grouping:
+              type: object
+              properties:
+                attributes:
+                  type: array
+                  items:
+                    type: string
+                    maxLength: 250
+                    pattern: '^(profile\.|user\.).+'
+                  maxItems: 10
+                  description: Array of profile attributes.
+                type:
+                  type: string
+                  enum: [HIERARCHICAL, SEQUENTIAL]
+              description: Not applicable for type `METRIC`. Grouping allows to narrow recommendations by profile attributes.
+              required:
+                - attributes
+                - type
+          required:
+            - datasource
+    CriteriaPopularityWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaPopularity'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    CriteriaPopularityWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaPopularity'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    CriteriaPriceRange:
+      type: object
+      properties:
+        max:
+          type: number
+          format: double
+        min:
+          type: number
+          format: double
+      description: Price rule filter for items to be considered in recommendations.
+    CriteriaProfileAttribute:
+      allOf:
+        - $ref: '#/components/schemas/Criteria'
+        - type: object
+          properties:
+            aggregation:
+              type: string
+              enum: [NONE, AGGREGATE, ALL_OR_NOTHING]
+              default: NONE
+              description: |
+                Whether recommendations should be shown solely based on the key (`NONE`) or visitor's behavioral history with
+                respect to the key (`AGGREGATE`, `ALL_OR_NOTHING`).
+                  - `NONE` implies no aggregation, to only show recommendations for the given key.
+                  - `AGGREGATE` begins with recommendations for the given key, top seller in this instance, then continues to next
+                    top seller until the design is filled.
+                  - `ALL_OR_NOTHING` is similar to aggregation but the aggregation only happens if the given key, most viewed item
+                    in this instance, has enough recommendations to fill the design. If the key does not have enough
+                    recommendations, next most viewed item is considered sequentially until the design is filled.
+            backupDisabled:
+              type: boolean
+              default: false
+              description: Whether backup recommendations are disabled when criteria does not generate enough recommendations.
+            backupInclusionFilteringEnabled:
+              type: boolean
+              default: true
+              description: Whether inclusion rules on the criteria should be applied to backup recommendations.
+            configuration:
+              $ref: '#/components/schemas/CriteriaProfileAttributeConfiguration'
+            criteriaGroup:
+              type: string
+              enum: [PROFILEATTRIBUTE]
+              readOnly: true
+            daysCount:
+              type: string
+              enum: [ONE_DAY, TWO_DAYS, ONE_WEEK, TWO_WEEKS, ONE_MONTH, TWO_MONTHS]
+              description: Time range of historical visitor behavioral data to consider for generating recommendations.
+            enableCaching:
+              type: boolean
+              default: false
+              deprecated: true
+              readOnly: true
+            excludePurchases:
+              type: boolean
+              default: false
+              description: Whether items that were previously purchased by the visitor should be excluded in recommendations.
+            minInventory:
+              type: integer
+              format: int32
+              minimum: 0
+              description: Minimum number of pieces needed in stock for an item to be considered for recommendaton.
+            partialDesignAllowed:
+              type: boolean
+              default: false
+              description: Whether design be shown when the number of recommendations are less than item slots in the design.
+            superSlotCount:
+              type: integer
+              format: int32
+              readOnly: true
+            type:
+              type: string
+              enum: [VIEWED_BOUGHT, BOUGHT_CF, VIEWED_CF, SITE_AFFINITY]
+              description: |
+                Recommendation logic. Values:
+
+                  - `VIEWED_BOUGHT`: People who viewed this, bought that.
+                  - `BOUGHT_CF`: People who bought this, bought that.
+                  - `VIEWED_CF`: People who viewed this, viewed that.
+                  - `SITE_AFFINITY`: Considers items based on the certainty of a relationship between items. Confidence setting is
+                    used to determine how much data (strong or weak affinity) is required before a recommendation is presented.
+          required:
+            - configuration
+            - daysCount
+            - type
+    CriteriaProfileAttributeConfiguration:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaConfiguration'
+        - type: object
+          properties:
+            attribute:
+              type: string
+              pattern: '^(profile\.|user\.).+'
+              description: Profile attribute.
+            confidence:
+              type: string
+              enum: [VERY_WEAK, WEAK, MODERATE, STRONG, VERY_STRONG]
+              description: Applicable only when type is `SITE_AFFINITY`. This determines how much data (strong or weak affinity)
+                is required before a recommendation is presented.
+            datasource:
+              type: string
+              description: Behavioral data source can either be `mboxes` or a valid Analytics report report suite.
+          required:
+            - attribute
+            - datasource
+    CriteriaProfileAttributeWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaProfileAttribute'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    CriteriaProfileAttributeWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaProfileAttribute'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    CriteriaRecent:
+      allOf:
+        - $ref: '#/components/schemas/Criteria'
+        - type: object
+          properties:
+            configuration:
+              $ref: '#/components/schemas/CriteriaRecentConfiguration'
+            criteriaGroup:
+              type: string
+              enum: [RECENT]
+              readOnly: true
+            minInventory:
+              type: integer
+              format: int32
+              minimum: 0
+              description: Minimum number of pieces needed in stock for an item to be considered for recommendaton.
+    CriteriaRecentConfiguration:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaConfiguration'
+    CriteriaRecentWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaRecent'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    CriteriaRecentWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaRecent'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    CriteriaSequence:
+      allOf:
+        - $ref: '#/components/schemas/Criteria'
+        - type: object
+          properties:
+            criteriaGroup:
+              type: string
+              enum: [SEQUENCE]
+              readOnly: true
+            backupDisabled:
+              type: boolean
+              default: false
+              description: Whether backup recommendations are disabled when criteria does not generate enough recommendations.
+            backupInclusionFilteringEnabled:
+              type: boolean
+              default: true
+              description: Whether inclusion rules on the criteria should be applied to backup recommendations.
+            partialDesignAllowed:
+              type: boolean
+              default: false
+              description: Whether design be shown when the number of recommendations are less than item slots in the design.
+            sequence:
+              type: array
+              minItems: 1
+              maxItems: 5
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                    description: ID of criteria in sequence.
+              description: Criteria sequence represented by an array of criteria object IDs.
+          required:
+              - sequence
+    CriteriaSequenceWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaSequence'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    CriteriaSequenceWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/CriteriaSequence'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    CriteriaWithReferencesMin:
+      oneOf:
+        - $ref: '#/components/schemas/CriteriaCategoryWithReferencesMin'
+        - $ref: '#/components/schemas/CriteriaCustomWithReferencesMin'
+        - $ref: '#/components/schemas/CriteriaItemWithReferencesMin'
+        - $ref: '#/components/schemas/CriteriaPopularityWithReferencesMin'
+        - $ref: '#/components/schemas/CriteriaProfileAttributeWithReferencesMin'
+        - $ref: '#/components/schemas/CriteriaRecentWithReferencesMin'
+        - $ref: '#/components/schemas/CriteriaSequenceWithReferencesMin'
+    Design:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 250
+          description: Unique name of the design.
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        script:
+          type: string
+          maxLength: 65000
+          description: Velocity template containing at least one entity object. Velocity Engine 1.7 is supported.
+      required:
+        - name
+        - script
+    DesignWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/Design'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    DesignWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/Design'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    DesignValidationResult:
+      type: object
+      properties:
+        entityCount:
+          type: integer
+          format: int32
+          description: Number of items used in the design script.
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorMessage'
+        valid:
+          type: boolean
+    Entity:
+      type: object
+      properties:
+        attributes:
+          type: object
+          properties:
+            inventory:
+              type: integer
+              format: int64
+            margin:
+              type: number
+              format: double
+            message:
+              type: string
+            pageUrl:
+              type: string
+            thumbnailUrl:
+              type: string
+            value:
+              type: number
+              format: double
+          additionalProperties:
+            type: string
+          description: Entity attributes. Besides some pre-defined attributes, about 100 custom attributes can be added. More info
+            about attributes available [here](https://marketing.adobe.com/resources/help/en_US/target/recs/r_entity_attributes.html).
+        categories:
+          type: array
+          items:
+            type: string
+            maxLength: 250
+          maxItems: 1000
+          minItems: 1
+          uniqueItems: true
+          description: Set of entity categories for the entity.
+        environment:
+          type: integer
+          format: int64
+          description: ID of an environment.
+        id:
+          type: string
+          maxLength: 1000
+        name:
+          type: string
+          maxLength: 250
+      required:
+        - id
+        - name
+        - categories
+    EntityBatch:
+      type: object
+      properties:
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entity'
+          minItems: 1
+      required:
+        - entities
+      description: Batch of entities.
+    EntityBatchDeleteResult:
+      type: object
+      properties:
+          operation:
+            type: string
+            enum: [Delete by client requested., deleted by ids]
+            description: Indicates how entities were deleted.
+    EntityBatchUpdateResult:
+      type: object
+      properties:
+          inserted/updated:
+            type: integer
+            format: int32
+          rejected:
+            type: integer
+            format: int32
+          rejectCauses:
+            type: array
+            items:
+              $ref: '#/components/schemas/EntityRejectMessage'
+            description: Error messages that caused the rejection of entities. Details can be found in `cause.text`.
+      description: Status of the operation (create or update) on the provided entities.
+    EntityRejectMessage:
+      type: object
+      properties:
+        cause:
+          $ref: '#/components/schemas/ErrorMessage'
+        occurrences:
+          type: integer
+          format: int32
+          description: Number of occurrences of the error message.
+    ErrorMessage:
+      type: object
+      properties:
+        key:
+          type: string
+        keyArguments:
+          type: array
+          items:
+            type: string
+        text:
+          type: string
+    FtpFeedConnectionType:
+      type: object
+      properties:
+        SERVER:
+          type: string
+        USERNAME:
+          type: string
+        PASSWORD:
+          type: string
+        FILENAME:
+          type: string
+        DIRECTORY:
+          type: string
+      required:
+        - SERVER
+        - USERNAME
+        - PASSWORD
+        - FILENAME
+        - DIRECTORY
+      description: FTP connection details of the feed.
+    Promotion:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        name:
+          type: string
+          maxLength: 250
+          description: Unique name of the promotion.
+        type:
+          type: string
+          enum: [EXTERNAL]
+          description: Type of promotion. Currently only external promotions can be created, in which promoted items do not
+            originate from any of the criteria specified in the current recommendation unit.
+        key:
+          type: string
+          enum: [CURRENT, LAST_PURCHASED, LAST_VIEWED, MOST_VIEWED, PROFILE_ATTRIBUTE]
+          description: |
+            Promotion key. Values:
+
+            - `CURRENT`: The currently viewed item.
+            - `LAST_VIEWED`: The last viewed item.
+            - `LAST_PURCHASED`: The last purchased item.
+            - `MOST_VIEWED`: The most viewed item. The recommendations are determined by items that have been most viewed. The
+              score is determined by recency/frequency: 10 points for first item view, 5 points for every subsequent view, all
+              points are halved after the session ends.
+            - `PROFILE_ATTRIBUTE`: Profile attribute.
+        attribute:
+          type: string
+          pattern: '^(profile\.|user\.).+'
+          description: Applicable when key is `PROFILE_ATTRIBUTE`. This is the profile attribute.
+        schedule:
+          $ref: '#/components/schemas/PromotionSchedule'
+        order:
+          $ref: '#/components/schemas/PromotionOrder'
+        configuration:
+          $ref: '#/components/schemas/PromotionConfiguration'
+        rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestInclusionMatcher'
+      required:
+        - name
+        - type
+    PromotionConfiguration:
+      type: object
+      properties:
+        collectionId:
+          type: integer
+          format: int64
+      description: Applicable only when rules are empty and type is not `INTERNAL`. It contains the the relevant collection for
+        promotion items.
+    PromotionOrder:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [ORIGINAL, RANDOM]
+          default: ORIGINAL
+    PromotionSchedule:
+      type: object
+      properties:
+        end:
+          type: string
+          format: date-time
+        start:
+          type: string
+          format: date-time
+      required:
+        - end
+        - start
+      description: Time duration for which promotion should be applied.
+    PromotionSlotConfiguration:
+      type: object
+      description: Maximum number of promoted items to be displayed.
+      properties:
+        maxSlots:
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 20
+      required:
+        - maxSlots
+    PromotionWithReferences:
+      allOf:
+        - $ref: '#/components/schemas/Promotion'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/References'
+    PromotionWithReferencesMin:
+      allOf:
+        - $ref: '#/components/schemas/Promotion'
+        - type: object
+          properties:
+            references:
+              $ref: '#/components/schemas/ReferencesMin'
+    RecommendationUnit:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          readOnly: true
+        name:
+          type: string
+          maxLength: 250
+          description: Unique name of the recommendation unit.
+        designId:
+          type: integer
+          format: int64
+        collectionId:
+          type: integer
+          format: int64
+        criteriaId:
+          type: integer
+          format: int64
+        promotions:
+          $ref: '#/components/schemas/RecommendationUnitPromotions'
+      required:
+        - criteriaId
+        - designId
+        - name
+    RecommendationUnitPromotions:
+      type: object
+      properties:
+        back:
+          description: Promotion whose items should be present at the end of the list of recommendations.
+          type: array
+          maxLength: 1
+          items:
+            $ref: '#/components/schemas/RecommendationUnitPromotionConfiguration'
+        front:
+          description: Promotion whose items should be present at the front of the list of recommendations.
+          type: array
+          maxLength: 1
+          items:
+            $ref: '#/components/schemas/RecommendationUnitPromotionConfiguration'
+      description: Defines the promotions to be used in the recommendation unit. Promotions can be either at the front or at the
+        back of the list of recommendations in the design.
+    RecommendationUnitPromotionConfiguration:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Promotion ID
+        configuration:
+          $ref: '#/components/schemas/PromotionSlotConfiguration'
+      required:
+        - id
+        - configuration
+    ReferencesMin:
+      type: object
+      properties:
+        legacyRecommendations:
+          type: object
+          properties:
+            activeCount:
+              type: integer
+              format: int32
+            inactiveCount:
+              type: integer
+              format: int32
+        recommendations:
+          type: object
+          properties:
+            count:
+              type: integer
+              format: int32
+      readOnly: true
+    References:
+      type: object
+      properties:
+        legacyRecommendations:
+          $ref: '#/components/schemas/RestRecommendationReferences'
+        recommendations:
+          $ref: '#/components/schemas/RestRecommendationUnitReferences'
+      readOnly: true
+    RestAlgoRankingRule:
+      type: object
+      properties:
+        matcher:
+          $ref: '#/components/schemas/RestMatcher'
+        weighting:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 4
+    RestBasicMatcher:
+      type: object
+      additionalProperties:
+        type: object
+        additionalProperties:
+          type: array
+          items:
+            type: string
+            maxLength: 250
+          minItems: 1
+          maxItems: 1000
+    RestInclusionMatcher:
+      type: object
+      properties:
+        attribute:
+          type: string
+          maxLength: 100
+        highRange:
+          type: string
+        lowRange:
+          type: string
+        operation:
+          type: string
+        source:
+          $ref: '#/components/schemas/RestSourceAttribute'
+        values:
+          type: array
+          items:
+            type: string
+            maxLength: 250
+          minItems: 1
+          maxItems: 1000
+      required:
+        - attribute
+        - operation
+    RestMatcher:
+      type: object
+      properties:
+        attribute:
+          type: string
+          maxLength: 100
+        operation:
+          type: string
+        source:
+          $ref: '#/components/schemas/RestSourceAttribute'
+        values:
+          type: array
+          items:
+            type: string
+            maxLength: 250
+          minItems: 1
+          maxItems: 1000
+      required:
+        - attribute
+        - operation
+    RestRecommendationReference:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+    RestRecommendationReferences:
+      type: object
+      properties:
+        active:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestRecommendationReference'
+        activeCount:
+          type: integer
+          format: int64
+        inactive:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestRecommendationReference'
+        inactiveCount:
+          type: integer
+          format: int64
+    RestRecommendationUnitReferences:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        details:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestRecommendationReference'
+    RestSourceAttribute:
+      type: object
+      properties:
+        defaultValue:
+          type: string
+        excludeAllWhenEmpty:
+          type: boolean
+        name:
+          type: string
+        type:
+          type: string
+      required:
+        - name
+        - type
+    UrlFeedConnectionType:
+      type: object
+      properties:
+        URL:
+          type: string
+      required:
+        - URL
+      description: HTTP location of the feed.
+    limit:
+      type: integer
+      format: int32
+      description: Number of resources shown in the response.
+    offset:
+      type: integer
+      format: int32
+      description: Number of resources skipped from start in the server list and
+        omitted in response.
+    total:
+      type: integer
+      format: int32
+      description: Number of resources returned in the response.
+  parameters:
+    entityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        maxLength: 1000
+    environmentId:
+      name: environmentId
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int64
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+    includeScript:
+      name: includeScript
+      in: query
+      description: Whether to include the design content.
+      required: false
+      schema:
+        type: boolean
+    limit:
+      name: limit
+      in: query
+      description: Number of resources to request. If not specified, the response will include all available resources.
+      required: false
+      schema:
+        $ref: '#/components/schemas/limit'
+    offset:
+      name: offset
+      in: query
+      description: Number of resources to skip from start in the server list. If not specified, the response list will start from
+        first available resource.
+      required: false
+      schema:
+        $ref: '#/components/schemas/offset'
+    references:
+      name: references
+      in: query
+      description: Whether to retrieve list of recommendation units and legacy recommendation objects associated with the
+        criteria. A recommendation unit or a legacy recommendation object is an internal object that has a one-to-one
+        correspondence with the recommendation activity. If there are no associated recommendation units or legacy recommendation
+        objects, no references are returned.
+      required: false
+      schema:
+        type: boolean
+    referencesMin:
+      name: references
+      in: query
+      description: Whether to retrieve the number of recommendation units and legacy recommendation objects associated with each
+        criteria. A recommendation unit or a legacy recommendation object is an internal object that has a one-to-one
+        correspondence with the recommendation activity.
+      required: false
+      schema:
+        type: boolean
+  examples:
+    CollectionRequest:
+      summary: Collection in request
+      description: A request body example of a collection object to be created/updated.
+      value:
+        name: Backpacking Tents
+        rules:
+          - bestUse:
+              equals:
+                - 'backpacking'
+          - weight:
+              less than:
+                - '10'
+          - capacity:
+              less than:
+                - '4'
+    CollectionResponse:
+      summary: Collection in response
+      description: A response body example of a collection object.
+      value:
+        id: 1
+        name: Backpacking Tents
+        rules:
+          - bestUse:
+              equals:
+                - 'backpacking'
+          - weight:
+              less than:
+                - '10'
+          - capacity:
+              less than:
+                - '4'
+    CollectionsResponse:
+      summary: List of collections in response
+      description: A response body example of a list containing 2 collections.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 2
+        list:
+          - id: 1
+            name: Men's Trail Running Shoes
+          - id: 2
+            name: Climbing Harnesses
+    CriteriaCategoryListResponse:
+      summary: List of category criteria in response
+      description: A response body example of a list containing 3 category criteria.
+      value:
+        offset: 2
+        limit: 2147483647
+        total: 3
+        list:
+          - id: 3
+            name: Most Popular Content from Visitor's Favorite Category
+            criteriaGroup: CATEGORY
+            type: VIEWED
+            key: FAVORITE
+            aggregation: NONE
+            daysCount: TWO_WEEKS
+            partialDesignAllowed: false
+            backupDisabled: false
+            excludePurchases: true
+            enableCaching: false
+            backupInclusionFilteringEnabled: true
+            configuration:
+              pastBehaviorOrdinal: 0
+          - id: 4
+            name: Top Selling Products from this Category
+            criteriaGroup: CATEGORY
+            type: BOUGHT
+            key: CURRENT
+            aggregation: NONE
+            daysCount: ONE_MONTH
+            partialDesignAllowed: false
+            backupDisabled: false
+            excludePurchases: true
+            enableCaching: false
+            backupInclusionFilteringEnabled: true
+            configuration:
+              pastBehaviorOrdinal: 0
+          - id: 5
+            name: Most Viewed Products from this Category
+            criteriaGroup: CATEGORY
+            type: VIEWED
+            key: CURRENT
+            aggregation: NONE
+            daysCount: TWO_WEEKS
+            minInventory: 1
+            partialDesignAllowed: false
+            backupDisabled: false
+            excludePurchases: true
+            enableCaching: false
+            backupInclusionFilteringEnabled: true
+            configuration:
+              inclusionRules:
+                - attribute: brand
+                  operation: contains
+                  source:
+                    name: colorDepth
+                    type: MBOX
+              pastBehaviorOrdinal: -1
+    CriteriaCategoryRequest:
+      summary: Category criteria in request
+      description: A request body example of a category based criteria to be created/updated.
+      value:
+        name: Most Popular Content from Visitor's Favorite Category
+        criteriaGroup: CATEGORY
+        type: VIEWED
+        key: FAVORITE
+        aggregation: NONE
+        daysCount: TWO_WEEKS
+        partialDesignAllowed: false
+        backupDisabled: false
+        excludePurchases: true
+        backupInclusionFilteringEnabled: true
+        configuration:
+          pastBehaviorOrdinal: 0
+    CriteriaCategoryResponse:
+      summary: Category criteria in response
+      description: A response body example of a category based criteria.
+      value:
+        id: 3
+        name: Most Popular Content from Visitor's Favorite Category
+        criteriaGroup: CATEGORY
+        type: VIEWED
+        key: FAVORITE
+        aggregation: NONE
+        daysCount: TWO_WEEKS
+        partialDesignAllowed: false
+        backupDisabled: false
+        excludePurchases: true
+        enableCaching: false
+        backupInclusionFilteringEnabled: true
+        configuration:
+          pastBehaviorOrdinal: 0
+    CriteriaCustomListResponse:
+      summary: List of custom criteria in response
+      description: A response body example of a list containing 3 custom criteria.
+      value:
+        offset: 42
+        limit: 45
+        total: 3
+        list:
+          - id: 43
+            name: Snowboarding recommendations
+            criteriaTitle: Snowboarding recs
+            criteriaGroup: CUSTOM
+            key: CURRENT
+            partialDesignAllowed: true
+            backupDisabled: false
+            excludePurchases: true
+            configuration:
+              feed:
+                environmentId: -1
+                scheduleType: daily
+                scheduleTime: 00:00
+                connection:
+                  type: url
+                  attributes:
+                    URL: 'https://www.reicountry.com/data/32fxss/snow-recs.csv'
+                uploadHistory:
+                  - status: SUCCESS
+                    message: 800/50
+                    date: '2018-08-08T20:17:44.000-04:00'
+                  - status: SUCCESS
+                    message: 800/50
+                    date: '2018-08-07T20:26:13.000-04:00'
+          - id: 44
+            name: Member Trips
+            criteriaTitle: Adventure Trips
+            criteriaGroup: CUSTOM
+            key: CATEGORY
+            partialDesignAllowed: true
+            backupDisabled: false
+            excludePurchases: false
+            backupInclusionFilteringEnabled: true
+            configuration:
+              feed:
+                environmentId: -1
+                scheduleType: weekly
+                scheduleTime: 00:00
+                connection:
+                  type: url
+                  attributes:
+                    URL: 'https://www.reicountry.com/data/38sfon/memtrps-recs.csv'
+                uploadHistory:
+                  - status: SUCCESS
+                    message: 800/50
+                    date: '2018-08-08T12:33:21.000-04:00'
+                  - status: SUCCESS
+                    message: 800/50
+                    date: '2018-08-01T12:36:45.000-04:00'
+                  - status: FILE_NOT_FOUND
+                    message: File does not exists
+                    date: '2018-07-23T12:31:22.000-04:00'
+          - id: 45
+            name: Classes Events
+            criteriaTitle: Classes & Events
+            criteriaGroup: CUSTOM
+            key: PROFILE_ATTRIBUTE
+            partialDesignAllowed: true
+            backupDisabled: false
+            excludePurchases: true
+            backupInclusionFilteringEnabled: true
+            configuration:
+              feed:
+                environmentId: 2304
+                scheduleType: daily
+                scheduleTime: 00:00
+                connection:
+                  type: ftp
+                  attributes:
+                    SERVER: 'ftp://ftp.reicountry.com'
+                    DIRECTORY: '/events/e4s'
+                    FILENAME: 'classesevents.csv'
+                    USERNAME: johnmuir
+                    PASSWORD: apZMtr+dm2jk5K7INSz5Fg==
+                uploadHistory:
+                  - status: SUCCESS
+                    message: 800/50
+                    date: '2018-04-21T15:10:44.000-04:00'
+                  - status: UNKNOWN_ERROR
+                    message: Connect to 54.22.123.21 timed out
+                    date: '2018-04-20T15:12:31.000-04:00'
+    CriteriaCustomRequest:
+      summary: Custom criteria in request
+      description: A request body example of a custom criteria to be created/updated.
+      value:
+        name: Classes Events
+        criteriaTitle: Classes & Events
+        key: PROFILE_ATTRIBUTE
+        partialDesignAllowed: true
+        backupDisabled: false
+        excludePurchases: true
+        backupInclusionFilteringEnabled: true
+        configuration:
+          feed:
+            environmentId: 2304
+            scheduleType: daily
+            scheduleTime: 00:00
+            connection:
+              type: ftp
+              attributes:
+                SERVER: 'ftp://ftp.reicountry.com'
+                DIRECTORY: '/events/e4s'
+                FILENAME: 'classesevents.csv'
+                USERNAME: johnmuir
+                PASSWORD: apZMtr+dm2jk5K7INSz5Fg==
+    CriteriaCustomResponse:
+      summary: Custom criteria in response
+      description: A response body example of a custom criteria.
+      value:
+        id: 45
+        name: Classes Events
+        criteriaTitle: Classes & Events
+        criteriaGroup: CUSTOM
+        key: PROFILE_ATTRIBUTE
+        partialDesignAllowed: true
+        backupDisabled: false
+        excludePurchases: true
+        backupInclusionFilteringEnabled: true
+        configuration:
+          feed:
+            environmentId: 2304
+            scheduleType: daily
+            scheduleTime: 00:00
+            connection:
+              type: ftp
+              attributes:
+                SERVER: 'ftp://ftp.reicountry.com'
+                DIRECTORY: '/events/e4s'
+                FILENAME: 'classesevents.csv'
+                USERNAME: johnmuir
+                PASSWORD: apZMtr+dm2jk5K7INSz5Fg==
+            uploadHistory:
+              - status: SUCCESS
+                message: 800/50
+                date: '2018-04-21T15:10:44.000-04:00'
+              - status: UNKNOWN_ERROR
+                message: Connect to 54.22.123.21 timed out
+                date: '2018-04-20T15:12:31.000-04:00'
+    CriteriaItemListResponse:
+      summary: List of item criteria in response
+      description: A response body example of a list containing 3 item based criteria.
+      value:
+        offset: 0
+        limit: 3
+        total: 3
+        list:
+          - id: 1
+            name: Items after buying road bike
+            criteriaGroup: ITEM
+            type: BOUGHT_CF
+            key: CURRENT
+            aggregation: NONE
+            daysCount: TWO_WEEKS
+            minInventory: 1
+            partialDesignAllowed: false
+            backupDisabled: false
+            excludePurchases: false
+            enableCaching: false
+            backupInclusionFilteringEnabled: true
+            configuration:
+              inclusionRules:
+                - attribute: category
+                  operation: contains
+                  source:
+                    name: category
+                    type: ENTITY
+                    excludeAllWhenEmpty: true
+                - attribute: category
+                  operation: contains
+                  values:
+                    - bike-road
+              pastBehaviorOrdinal: -1
+          - id: 2
+            name: Similar items
+            criteriaGroup: ITEM
+            type: BOUGHT_CF
+            key: CURRENT
+            aggregation: NONE
+            daysCount: TWO_WEEKS
+            minInventory: 1
+            partialDesignAllowed: false
+            backupDisabled: true
+            excludePurchases: false
+            enableCaching: true
+            backupInclusionFilteringEnabled: true
+            configuration:
+              inclusionRules:
+                - attribute: brand
+                  operation: contains
+                  source:
+                    name: brand
+                    defaultValue: rei-coop
+                    type: ENTITY
+              pastBehaviorOrdinal: -1
+          - id: 3
+            name: Viewed items by users who last purchased current item
+            criteriaGroup: ITEM
+            type: VIEWED_BOUGHT_CF
+            key: CURRENT
+            aggregation: NONE
+            daysCount: TWO_WEEKS
+            minInventory: 1
+            partialDesignAllowed: true
+            backupDisabled: true
+            excludePurchases: false
+            enableCaching: false
+            backupInclusionFilteringEnabled: false
+            configuration:
+              pastBehaviorOrdinal: 0
+    CriteriaItemRequest:
+      summary: Item criteria in request
+      description: A request body example of an item based criteria to be created/updated.
+      value:
+        name: Items after buying road bike
+        criteriaGroup: ITEM
+        type: BOUGHT_CF
+        key: CURRENT
+        aggregation: NONE
+        daysCount: TWO_WEEKS
+        minInventory: 1
+        partialDesignAllowed: false
+        backupDisabled: false
+        excludePurchases: false
+        backupInclusionFilteringEnabled: true
+        configuration:
+          inclusionRules:
+            - attribute: category
+              operation: contains
+              source:
+                name: category
+                type: ENTITY
+                excludeAllWhenEmpty: true
+            - attribute: category
+              operation: contains
+              values:
+                - bike-road
+          pastBehaviorOrdinal: -1
+    CriteriaItemResponse:
+      summary: Item criteria in response
+      description: A response body example of an item based criteria.
+      value:
+        id: 2
+        name: Similar items
+        criteriaGroup: ITEM
+        type: BOUGHT_CF
+        key: CURRENT
+        aggregation: NONE
+        daysCount: TWO_WEEKS
+        minInventory: 1
+        partialDesignAllowed: false
+        backupDisabled: true
+        excludePurchases: false
+        enableCaching: true
+        backupInclusionFilteringEnabled: true
+        configuration:
+          inclusionRules:
+            - attribute: brand
+              operation: contains
+              source:
+                name: brand
+                defaultValue: rei-coop
+                type: ENTITY
+          pastBehaviorOrdinal: -1
+    CriteriaListResponse:
+      summary: List of criteria in response
+      description: A response body example of a list containing 3 criteria.
+      value:
+        offset: 2,
+        limit: 2147483647,
+        total: 3
+        list:
+          - id: 3
+            name: Recently Viewed Backpacks
+            criteriaTitle: Recently Viewed Backpacks
+            criteriaGroup: RECENT
+            minInventory: 1
+            configuration:
+              rankingRules: []
+          - id: 4
+            name: People who viewed this also bought
+            criteriaGroup: ITEM
+            type: VIEWED_BOUGHT_CF
+            key: LAST_PURCHASED
+            aggregation: NONE
+            daysCount: ONE_MONTH
+            partialDesignAllowed: false
+            backupDisabled: false
+            excludePurchases: true
+            enableCaching: false
+            backupInclusionFilteringEnabled: true
+            configuration:
+              pastBehaviorOrdinal: 0
+          - id: 5
+            name: Most Viewed Shirts
+            criteriaGroup: POPULARITY
+            type: VIEWED
+            aggregation: NONE
+            daysCount: TWO_WEEKS
+            minInventory: 1
+            partialDesignAllowed: false
+            backupDisabled: false
+            excludePurchases: true
+            enableCaching: false
+            backupInclusionFilteringEnabled: true
+            configuration:
+              inclusionRules:
+                - attribute: value
+                  operation: dynamicallyRanges
+                  lowRange: 0
+                  highRange: 30
+              pastBehaviorOrdinal: 0
+    CriteriaMinimalResponse:
+      summary: Criteria in response
+      description: A response body example of a criteria with minimal information.
+      value:
+        id: 34
+        name: Recently Viewed Biking Accessories
+        criteriaTitle: Recently Viewed Biking Accessories
+        criteriaGroup: RECENT
+    CriteriaPopularityListResponse:
+      summary: List of popularity criteria in response
+      description: A response body example of a list containing 3 popularity based criteria.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 2
+        list:
+          - id: 3422
+            name: Garage Top Viewed
+            criteriaGroup: POPULARITY
+            type: VIEWED
+            aggregation: NONE
+            daysCount: TWO_DAYS
+            minInventory: 2
+            partialDesignAllowed: true
+            backupDisabled: false
+            excludePurchases: true
+            backupInclusionFilteringEnabled: true
+            configuration:
+              datasource: mboxes
+          - id: 9321
+            name: Top sold by region
+            criteriaGroup: POPULARITY
+            type: BOUGHT
+            aggregation: ALL_OR_NOTHING
+            daysCount: ONE_MONTH
+            configuration:
+              datasource: mboxes
+              grouping:
+                type: SEQUENTIAL
+                attributes: [city, county, state]
+    CriteriaPopularityRequest:
+      summary: Popularity criteria in request
+      description: A request body example of an popularity based criteria to be created/updated.
+      value:
+        name: Garage Top Viewed
+        type: VIEWED
+        aggregation: NONE
+        daysCount: TWO_DAYS
+        minInventory: 2
+        partialDesignAllowed: true
+        backupDisabled: false
+        excludePurchases: true
+        backupInclusionFilteringEnabled: true
+        configuration:
+          datasource: mboxes
+    CriteriaPopularityResponse:
+      summary: Popularity criteria in response
+      description: A response body example of a popularity based criteria.
+      value:
+        id: 9321
+        name: Top sold by region
+        criteriaGroup: POPULARITY
+        type: BOUGHT
+        aggregation: ALL_OR_NOTHING
+        daysCount: ONE_MONTH
+        configuration:
+          datasource: mboxes
+          grouping:
+            type: SEQUENTIAL
+            attributes: [city, county, state]
+    CriteriaProfileAttributeListResponse:
+      summary: List of profile attribute criteria in response
+      description: A response body example of a list containing 3 profile attribute based criteria.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 2
+        list:
+          - id: 1
+            name: city-bike-recs
+            criteriaTitle: Bike recommendations per city
+            criteriaGroup: PROFILEATTRIBUTE
+            type: VIEWED
+            aggregation: NONE
+            daysCount: ONE_MONTH
+            minInventory: 5
+            partialDesignAllowed: true
+            backupDisabled: false
+            excludePurchases: true
+            configuration:
+              attribute: profile.city
+              inclusionRules:
+                - attribute: city
+                  operation: dynamicallyMatches
+                - attribute: category
+                  operation: contains
+                  values: [bike]
+              datasource: mboxes
+          - id: 2
+            name: gender-recs
+            criteriaTitle: Generic recommendations based on gender
+            criteriaGroup: PROFILEATTRIBUTE
+            type: VIEWED
+            aggregation: ALL_OR_NOTHING
+            daysCount: ONE_MONTH
+            configuration:
+              attribute: profile.gender
+              datasource: mboxes
+    CriteriaProfileAttributeRequest:
+      summary: Profile attribute criteria in request
+      description: A request body example of an profile attribute based criteria to be created/updated.
+      value:
+        name: city-bike-recs
+        criteriaTitle: Bike recommendations per city
+        type: VIEWED
+        aggregation: NONE
+        daysCount: ONE_MONTH
+        minInventory: 5
+        partialDesignAllowed: true
+        backupDisabled: false
+        excludePurchases: true
+        configuration:
+          attribute: profile.city
+          inclusionRules:
+            - attribute: city
+              operation: dynamicallyMatches
+            - attribute: category
+              operation: contains
+              values: [bike]
+          datasource: mboxes
+    CriteriaProfileAttributeResponse:
+      summary: Profile attribute criteria in response
+      description: A response body example of a profile attribute based criteria.
+      value:
+        id: 1
+        name: city-bike-recs
+        criteriaTitle: Bike recommendations per city
+        criteriaGroup: PROFILEATTRIBUTE
+        type: VIEWED
+        aggregation: NONE
+        daysCount: ONE_MONTH
+        minInventory: 5
+        partialDesignAllowed: true
+        backupDisabled: false
+        excludePurchases: true
+        configuration:
+          attribute: profile.city
+          inclusionRules:
+            - attribute: city
+              operation: dynamicallyMatches
+            - attribute: category
+              operation: contains
+              values: [bike]
+          datasource: mboxes
+    CriteriaRecentListResponse:
+      summary: List of recent criteria in response
+      description: A response body example of a list containing 2 recent view based criteria.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 2
+        list:
+          - id: 1
+            name: Recently Viewed Products
+            criteriaTitle: Just Seen Items
+            criteriaGroup: RECENT
+            minInventory: 1
+            configuration:
+              rankingRules: []
+          - id: 2
+            name: Recently Viewed in Same Brand
+            criteriaGroup: RECENT
+            minInventory: 1
+            configuration:
+              inclusionRules:
+                - attribute: brand
+                  operation: dynamicallyMatches
+                  source:
+                    name: brand
+                    type: ENTITY
+                    excludeAllWhenEmpty: true
+                - attribute: value
+                  operation: dynamicallyRanges
+                  lowRange: 1
+                  highRange: 99
+              rankingRules: []
+    CriteriaRecentRequest:
+      summary: Recent criteria in request
+      description: A request body example of a recent view based criteria to be created/updated.
+      value:
+        name: Recently Viewed Products
+        criteriaTitle: Just Seen Items
+        criteriaGroup: RECENT
+        minInventory: 3
+        configuration:
+          rankingRules: []
+    CriteriaRecentResponse:
+      summary: Recent criteria in response
+      description: A response body example of a recent view based criteria.
+      value:
+        - id: 2
+          name: Recently Viewed in Same Brand
+          criteriaGroup: RECENT
+          minInventory: 1
+          configuration:
+            inclusionRules:
+              - attribute: brand
+                operation: dynamicallyMatches
+                source:
+                  name: brand
+                  type: ENTITY
+                  excludeAllWhenEmpty: true
+              - attribute: value
+                operation: dynamicallyRanges
+                lowRange: 1
+                highRange: 99
+            rankingRules: []
+    CriteriaSequenceListResponse:
+      summary: List of sequence criteria in response
+      description: A response body example of a list containing 2 sequence criteria.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 3
+        list:
+          - id: 56
+            name: Top Dashboard Items
+            criteriaTitle: Top Dashboard Items
+            criteriaGroup: SEQUENCE
+            backupDisabled: true
+            sequence:
+              - id: 332
+              - id: 333
+          - id: 67
+            name: Freight Recs
+            criteriaTitle: Freight Recommendations
+            criteriaGroup: SEQUENCE
+            backupDisabled: true
+            sequence:
+              - id: 345
+              - id: 346
+              - id: 348
+              - id: 349
+              - id: 350
+          - id: 71
+            name: Events Across
+            criteriaTitle: Garage Events
+            criteriaGroup: SEQUENCE
+            backupDisabled: false
+            partialDesignAllowed: true
+            sequence:
+              - id: 401
+              - id: 402
+              - id: 406
+    CriteriaSequenceRequest:
+      summary: Sequence criteria in request
+      description: A request body example of a sequence criteria to be created/updated.
+      value:
+        name: Top Dashboard Items
+        criteriaTitle: Top Dashboard Items
+        backupDisabled: true
+        sequence:
+          - id: 332
+          - id: 333
+    CriteriaSequenceResponse:
+      summary: Sequence criteria in response
+      description: A response body example of a sequence criteria.
+      value:
+        id: 56
+        name: Top Dashboard Items
+        criteriaTitle: Top Dashboard Items
+        criteriaGroup: SEQUENCE
+        backupDisabled: true
+        sequence:
+          - id: 332
+          - id: 333
+    DesignRequest:
+      summary: Design in request
+      description: A request body example of a design to be created/updated.
+      value:
+        name: Landing Page
+        script: name = $entity1.name<br/> details= $entity1.details
+          <table>\n <tr>\n  <td>\n   <a href=\"$entity1.pageUrl\">\n
+          <img src=\"$entity1.thumbnailUrl\"/>\n    <br/>$profile\n    <br/>
+          $token\n    <br/>$url\n   </a>\n  </td>\n  <td>\n
+          <a href=\"$entity2.pageUrl\">\n   <img src=\"$entity2.thumbnailUrl\"/>
+          \n    <br/>$entity2.name\n    <br/>$entity2.message\n    <br/>
+          $entity2.value\n   </a>\n  </td>\n  <td>\n
+          <a href=\"$entity3.pageUrl\">\n   <img src=\"$entity3.thumbnailUrl\"/>
+          \n    <br/>$entity3.name\n    <br/>$entity3.message\n    <br/>
+          $entity3.value\n   </a>\n  </td>\n </tr>\n</table>
+    DesignResponse:
+      summary: Design in response
+      description: A response body example of a design object.
+      value:
+        id: 1
+        name: Landing Page
+        script:
+          <table>\n <tr>\n  <td>\n   <a href=\"$entity1.pageUrl\">\n
+          <img src=\"$entity1.thumbnailUrl\"/>\n    <br/>$profile\n    <br/>
+          $token\n    <br/>$url\n   </a>\n  </td>\n  <td>\n
+          <a href=\"$entity2.pageUrl\">\n   <img src=\"$entity2.thumbnailUrl\"/>
+          \n    <br/>$entity2.name\n    <br/>$entity2.message\n    <br/>
+          $entity2.value\n   </a>\n  </td>\n  <td>\n
+          <a href=\"$entity3.pageUrl\">\n   <img src=\"$entity3.thumbnailUrl\"/>
+          \n    <br/>$entity3.name\n    <br/>$entity3.message\n    <br/>
+          $entity3.value\n   </a>\n  </td>\n </tr>\n</table>
+    DesignsResponse:
+      summary: List of designs in response
+      description: A response body example of a list containing 1 design.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 1
+        list:
+          - id: 1
+            name: Landing Page
+            script:
+              <table>\n <tr>\n  <td>\n   <a href=\"$entity1.pageUrl\">\n
+              <img src=\"$entity1.thumbnailUrl\"/>\n    <br/>$profile\n    <br/>
+              $token\n    <br/>$url\n   </a>\n  </td>\n  <td>\n
+              <a href=\"$entity2.pageUrl\">\n   <img src=\"$entity2.thumbnailUrl\"/>
+              \n    <br/>$entity2.name\n    <br/>$entity2.message\n    <br/>
+              $entity2.value\n   </a>\n  </td>\n  <td>\n
+              <a href=\"$entity3.pageUrl\">\n   <img src=\"$entity3.thumbnailUrl\"/>
+              \n    <br/>$entity3.name\n    <br/>$entity3.message\n    <br/>
+              $entity3.value\n   </a>\n  </td>\n </tr>\n</table>
+    DesignValidationResultResponse:
+      summary: Validation result in response
+      description: A response body example of validation result of the design object provided in request.
+      value:
+        entityCount: 0
+        valid: false
+        errors:
+          - key: error.template.validate.entitiesRequired
+            keyArguments: []
+            text: There should be at least one entity reference within the template script
+    EntityBatchDeleteResult:
+      summary: Entity batch delete result in response
+      description: A response body example of entity batch delete result indicating all entities were deleted.
+      value:
+        operation: Delete by client requested.
+    EntityBatchRequest:
+      summary: Entities in request
+      description: A request body example of an entity to be created/updated.
+      value:
+        entities:
+          - name: Rotisserie Chicken
+            id: wes2001
+            environment: 4227
+            categories: ['recreation:food']
+            attributes:
+              inventory: 77
+              margin: 23
+              message: crashing helicopter
+              pageUrl: www.foobar.foo.com/helicopter.html
+              thumbnailUrl: www.foobar.foo.com/helicopter.jpg
+              value: 19.2
+    EntityBatchUpdateResult:
+      summary: Entity batch update result in response
+      description: A response body example of entity batch update result showing a successful update.
+      value:
+        rejected: 0
+        inserted/updated: 1
+    EntityResponse:
+      summary: Entity in response
+      description: A response body example of an entity object.
+      value:
+        name: Rotisserie Chicken
+        id: item1
+        environment: 4227
+        categories: ['recreation:food']
+        attributes:
+          inventory: 77
+          margin: 23
+          message: crashing helicopter
+          pageUrl: www.foobar.foo.com/helicopter.html
+          thumbnailUrl: www.foobar.foo.com/helicopter.jpg
+          value: 19.2
+    PromotionRequest:
+      summary: Promotion in request
+      description: A request body example of a promotion object to be
+        created/updated.
+      value:
+        name: Hiking shoes summer promotion
+        type: INTERNAL
+        schedule:
+          start: 2018-07-01T00:00:00Z
+          end: 2018-08-31T23:59:59Z
+        order:
+          type: ORIGINAL
+        configuration: 1
+        rules:
+          - attribute: category
+            operation: endsWith
+            values: [ 'Hiking Shoes' ]
+    PromotionResponse:
+      summary: Promotion in response
+      description: A response body example of a Promotion object.
+      value:
+        id: 1
+        name: Hiking shoes summer promotion
+        type: INTERNAL
+        schedule:
+          start: 2018-07-01T00:00:00Z
+          end: 2018-08-31T23:59:59Z
+        order:
+          type: ORIGINAL
+        configuration: 1
+        rules:
+          - attribute: category
+            operation: endsWith
+            values: [ 'Hiking Shoes' ]
+    PromotionsResponse:
+      summary: List of promotions in response
+      description: A response body example of a list containing 2 promotions.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 2
+        list:
+          - id: 1
+            name: Hiking shoes summer promotion
+            type: INTERNAL
+            schedule:
+              start: 2018-07-01T00:00:00Z
+              end: 2018-08-31T23:59:59Z
+            order:
+              type: ORIGINAL
+            configuration: 1
+            rules:
+              - attribute: category
+                operation: endsWith
+                values: [ 'Hiking Shoes' ]
+          - id: 2
+            name: Shoes clearance sale
+            type: EXTERNAL
+            order:
+              type: ORIGINAL
+            rules :
+              - attribute: value
+                operation: lesserOrEquals
+                values : [ 200 ]
+    RecommendationUnitRequest:
+      summary: Recommendation unit in request
+      description: A request body example of a recommendation unit object to be created/updated.
+      value:
+        name: Labor day sale
+        designId: 7664
+        criteriaId: 3
+        promotions:
+          front:
+            - id: 1
+              configuration:
+                maxSlots: 2
+          back:
+            - id: 2
+              configuration:
+                maxSlots: 3
+    RecommendationUnitResponse:
+      summary: Recommendation unit in response
+      description: A response body example of a recommendation unit object.
+      value:
+        id: 1
+        name: Labor day sale
+        designId: 7664
+        criteriaId: 3
+        promotions:
+          front:
+            - id: 1
+              configuration:
+                maxSlots: 2
+          back:
+            - id: 2
+              configuration:
+                maxSlots: 3
+    RecommendationUnitsResponse:
+      summary: List of recommendation units in response
+      description:  A response body example of a list containing 2 recommendation units.
+      value:
+        offset: 0
+        limit: 2147483647
+        total: 2
+        list:
+          - id: 1
+            name: Labor day sale
+            designId: 7664
+            criteriaId: 3
+            promotions:
+              front:
+                - id: 1
+                  configuration:
+                    maxSlots: 2
+              back:
+                - id: 2
+                  configuration:
+                    maxSlots: 3
+          - id: 2
+            name: End of summer sale
+            designId: 7664
+            criteriaId: 3
+            collectionId: 4477
+  requestBodies:
+    Collection:
+      description: Collection to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/Collection'
+          examples:
+            CollectionRequest:
+              $ref: '#/components/examples/CollectionRequest'
+      required: true
+    CriteriaCategory:
+      description: Category based criteria to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/CriteriaCategory'
+          examples:
+            CriteriaCategoryRequest:
+              $ref: '#/components/examples/CriteriaCategoryRequest'
+      required: true
+    CriteriaCustom:
+      description: Custom criteria to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/CriteriaCustom'
+          examples:
+            CriteriaCustomRequest:
+              $ref: '#/components/examples/CriteriaCustomRequest'
+      required: true
+    CriteriaItem:
+      description: Item based criteria to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/CriteriaItem'
+          examples:
+            CriteriaItemRequest:
+              $ref: '#/components/examples/CriteriaItemRequest'
+      required: true
+    CriteriaPopularity:
+      description: Popularity based criteria to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/CriteriaPopularity'
+          examples:
+            CriteriaPopularityRequest:
+              $ref: '#/components/examples/CriteriaPopularityRequest'
+      required: true
+    CriteriaProfileAttribute:
+      description: Profile attribute based criteria to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/CriteriaProfileAttribute'
+          examples:
+            CriteriaPopularityRequest:
+              $ref: '#/components/examples/CriteriaProfileAttributeRequest'
+    CriteriaRecent:
+      description: Recent view based criteria to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/CriteriaRecent'
+          examples:
+            CriteriaRecentRequest:
+              $ref: '#/components/examples/CriteriaRecentRequest'
+    CriteriaSequence:
+      description: Sequence criteria to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/CriteriaSequence'
+          examples:
+            CriteriaRecentRequest:
+              $ref: '#/components/examples/CriteriaSequenceRequest'
+      required: true
+    Design:
+      description: Design to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/Design'
+          examples:
+            DesignRequest:
+              $ref: '#/components/examples/DesignRequest'
+      required: true
+    EntityBatch:
+      description: Entities to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/EntityBatch'
+          examples:
+            EntityBatchRequest:
+              $ref: '#/components/examples/EntityBatchRequest'
+      required: true
+    Promotion:
+      description: Promotion to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/Promotion'
+          examples:
+            PromotionRequest:
+              $ref: '#/components/examples/PromotionRequest'
+      required: true
+    RecommendationUnit:
+      description: Recommendation unit to be created/updated
+      content:
+        application/vnd.adobe.target.v1+json:
+          schema:
+            $ref: '#/components/schemas/RecommendationUnit'
+          examples:
+            RecommendationUnitRequest:
+              $ref: '#/components/examples/RecommendationUnitRequest'
+      required: true
+  securitySchemes:
+    'OAuth 2.0':
+      type: oauth2
+      description: This API uses [OAuth 2.0](https://www.adobe.io/authentication/auth-methods.html#!adobeio/adobeio-documentation/master/auth/OAuth2.0Endpoints/web-oauth2.0-guide.md)
+        framework for authentication and authorization. Refer [this](https://www.adobe.io/apis/cloudplatform/console/authentication/oauth_workflow.html)
+        to the generate access token required for API calls.
+      flows:
+        password:
+          tokenUrl: https://ims-na1.adobelogin.com/ims/token/
+          scopes: {}
+    'API Key':
+      type: apiKey
+      description: This API also uses [API Key](https://stackoverflow.com/questions/1453073/what-is-an-api-key) for
+        authorization. You can obtain the API Key from your [Adobe I/O Console](https://console.adobe.io/).
+      in: header
+      name: X-Api-Key
+security:
+  - 'OAuth 2.0': []
+    'API Key': []
+tags:
+  - name: Collections
+    description: |
+      A collection is a set of items that are eligible for a recommendation. It is defined by a set of membership rules. If an
+      item satisfies these rules, it is a member of the collection.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_collections.html
+  - name: Criteria
+    description: |
+      Criteria are rules that determine which items to recommend based on a predetermined set of visitor behaviors. Criteria are
+      categorized into different groups depending on the recommendation key and recommendation logic. These groups are: category,
+      item, recent, popularity, profile attribute, custom.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_algorithms.html
+  - name: Category Criteria
+    description: |
+      Category Criteria are criteria based on item category. The recommendation
+      key is currently viewed item category or visitor favorite category.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_algorithms.html
+  - name: Custom Criteria
+    description: |
+      Custom Criteria are criteria based on user-defined custom recommendations. You upload a CSV containing item keys and their
+      corresponding list of recommendations. These recommendations, after applying configuration rules and settings, if any, will
+      be delivered to your page. The item keys in your CSV should map to items or categories in the catalog. The recommendation
+      key of this criteria can be any item based, category based key or profile attribute key depending on the item keys in the
+      CSV. The CSV upload is carried out through a feed as part of configuration to create a custom criteria. Note, an item key
+      refers to the key in the CSV feed whereas a recommendation key refers to how the item key will be treated, that is, it can
+      be treated as ID of currently viewed item or visitor's favorite category.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/t_recommendations_csv.html
+  - name: Item Criteria
+    description: |
+      Item Criteria are criteria based on visitor's activity on item. The recommendation key is currently viewed item, last viewed
+      item, most viewed item or last purchased item. Note that this does not include recently viewed item, check Recent Criteria
+      APIs for that.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_algorithms.html
+  - name: Popularity Criteria
+    description: |
+      Popularity Criteria are criteria that generate popular items as recommendations. The recommendation key is top sellers, most
+      viewed items or Analytics product report metric.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_algorithms.html
+  - name: Profile Attribute Criteria
+    description: Profile Attribute Criteria are criteria where recommendation is determined by an item that is stored in visitor's
+      profile using either `user.*` or `profile.*` attributes. The profile attribute contains the item ID on which the
+      recommendations are based.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_algorithms.html
+  - name: Recent Criteria
+    description: Recent Criteria are criteria based on recently viewed items.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_algorithms.html
+  - name: Sequence Criteria
+    description: |
+      A Sequence Criteria is a combination of multiple criteria. Such sequence of up to five criteria can be used to exercise
+      greater control of recommendations. By using a criteria sequence, you can provide additional targeted recommendations,
+      instead of using more generic backup recommendations, when a criteria doesn't return enough results to fill your design.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/t_create_criteria_sequence.html
+  - name: Designs
+    description: |
+      A design is a script that is used to determine how your recommendations look. You can create customized designs to provide
+      the appearance you desire. The script can be HTML or non-HTML; non-HTML for non-web environments where click-tracking is not
+      possible. Recommendation designs use Apache Velocity, so the script should make use of [Velocity Template Language](http://velocity.apache.org/engine/1.7/vtl-reference.html).
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_design-overview.html
+  - name: Entities
+    description: |
+      Entities refer to the items you want to recommend. Entities can be anything such as products, content (such as articles,
+      slide shows, images, movies, and TV shows), job listings, restaurants, and so forths
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_products.html
+  - name: Promotions
+    description: |
+      Promotion is a special type of criteria that includes promoted items in your recommendation design. Item recommendation by
+      promotions use available slots in the design and take precedence over criteria results and backup recommendations.
+    externalDocs:
+      description: More info.
+      url: https://marketing.adobe.com/resources/help/en_US/target/recs/t_adding_promotions.html
+externalDocs:
+  description: Product documentation at Adobe Experience Cloud Help
+  url: https://marketing.adobe.com/resources/help/en_US/target/recs/c_recommendations.html
