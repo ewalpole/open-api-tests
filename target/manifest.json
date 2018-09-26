@@ -1,0 +1,20 @@
+{
+	"name": "Open API Tests",
+	"version": "1.0.0",
+	"description": "Adobe@Adobe Open API Tests",
+	"author": "Emily Walpole",
+	"view_type": "swaggerbook",
+	"meta_keywords": "defaultkeyword,defaultkeyword2",
+	"meta_description": "default description",
+	"publish_date": "24/09/2018",
+	"show_edit_github_banner": false,
+	"base_path": "https://raw.githubusercontent.com/ewalpole/target",
+	"pages": [
+		{
+			"pages": [],
+			"path": "recommendations-api.yaml",
+			"title": "Target Recommendations API Test"
+		}
+
+	]
+}
